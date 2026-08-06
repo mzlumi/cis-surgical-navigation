@@ -82,4 +82,4 @@ Correctness is shown by matching every debug output, measured as the maximum and
 
 ## Credit
 
-The problem, the handout and the data are by Russell H. Taylor and the CIS I teaching staff at Johns Hopkins University, and are included here for reference only. All code in this repository is my own.
+The problem, the handout and the data are by Russell H. Taylor and the CIS I teaching staff at Johns Hopkins University, and are included here for reference only. The code here was written for this project from the handout alone; no code from past students' solutions was used.
