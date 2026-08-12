@@ -43,6 +43,26 @@ def test_expected_C_matches_reference_without_em_error(set_name: str) -> None:
     assert err.max() < 0.03
 
 
+def test_em_pivot_synthetic() -> None:
+    rng = np.random.default_rng(1)
+    markers = rng.uniform(-30, 30, size=(6, 3))
+    tip, post = np.array([10.0, -80.0, 5.0]), np.array([200.0, 190.0, 210.0])
+    G = []
+    for _ in range(12):
+        F = random_frame(rng)
+        F = type(F)(F.R, post - F.R @ tip)
+        G.append(F.apply(markers))
+    np.testing.assert_allclose(pa1.em_pivot(np.stack(G)).p_post, post, atol=1e-8)
+
+
+@pytest.mark.parametrize("set_name", [f"debug-{s}" for s in "abcdefg"])
+def test_em_pivot_matches_reference(set_name: str) -> None:
+    prefix = f"pa1-{set_name}"
+    G = io.read_empivot(io.data_path(DATA / "pa1", prefix, "empivot"))
+    ref = io.read_output1(io.data_path(DATA / "pa1", prefix, "output1"))
+    assert np.linalg.norm(pa1.em_pivot(G).p_post - ref.em_post) < 0.02
+
+
 @pytest.mark.parametrize("set_name", PA1_SETS)
 def test_expected_C_is_a_rigid_image_of_c(set_name: str) -> None:
     cal, readings = _load(set_name)

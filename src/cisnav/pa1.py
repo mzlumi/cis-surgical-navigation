@@ -18,6 +18,7 @@ import numpy as np
 
 from cisnav.frames import Frame
 from cisnav.io import CalBody, CalReadings
+from cisnav.pivot import PivotResult, pivot_calibration
 from cisnav.registration import register
 
 
@@ -40,3 +41,12 @@ def expected_C(cal: CalBody, readings: CalReadings) -> np.ndarray:
     return np.stack(
         [expected_C_frame(cal, D, A) for D, A in zip(readings.D, readings.A)]
     )
+
+
+def em_pivot(G: np.ndarray) -> PivotResult:
+    """Pivot calibration of the EM probe from readings ``G`` ``(N_frames, N_G, 3)``.
+
+    The post position comes out directly in EM tracker coordinates.
+    """
+    result, _ = pivot_calibration(G)
+    return result
