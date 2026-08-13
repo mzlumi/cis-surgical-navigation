@@ -63,6 +63,30 @@ def test_em_pivot_matches_reference(set_name: str) -> None:
     assert np.linalg.norm(pa1.em_pivot(G).p_post - ref.em_post) < 0.02
 
 
+def test_optical_probe_mapped_through_each_frames_F_D() -> None:
+    # The optical tracker moves between frames; H must be expressed in EM
+    # coordinates with that frame's own F_D, which cancels the motion.
+    rng = np.random.default_rng(2)
+    d = rng.uniform(-50, 50, size=(8, 3))
+    H_em = rng.uniform(100, 300, size=(3, 6, 3))
+    poses = [random_frame(rng, 1000) for _ in range(3)]
+    opt = io.OptPivot(
+        D=np.stack([F.apply(d) for F in poses]),
+        H=np.stack([F.apply(h) for F, h in zip(poses, H_em)]),
+    )
+    cal = io.CalBody(d=d, a=d, c=d)
+    np.testing.assert_allclose(pa1.optical_probe_in_em(cal, opt), H_em, atol=1e-9)
+
+
+@pytest.mark.parametrize("set_name", [f"debug-{s}" for s in "abcdefg"])
+def test_optical_pivot_matches_reference(set_name: str) -> None:
+    prefix = f"pa1-{set_name}"
+    cal = io.read_calbody(io.data_path(DATA / "pa1", prefix, "calbody"))
+    opt = io.read_optpivot(io.data_path(DATA / "pa1", prefix, "optpivot"))
+    ref = io.read_output1(io.data_path(DATA / "pa1", prefix, "output1"))
+    assert np.linalg.norm(pa1.optical_pivot(cal, opt).p_post - ref.opt_post) < 0.02
+
+
 @pytest.mark.parametrize("set_name", PA1_SETS)
 def test_expected_C_is_a_rigid_image_of_c(set_name: str) -> None:
     cal, readings = _load(set_name)

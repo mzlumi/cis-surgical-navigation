@@ -17,7 +17,7 @@ from __future__ import annotations
 import numpy as np
 
 from cisnav.frames import Frame
-from cisnav.io import CalBody, CalReadings
+from cisnav.io import CalBody, CalReadings, OptPivot
 from cisnav.pivot import PivotResult, pivot_calibration
 from cisnav.registration import register
 
@@ -49,4 +49,19 @@ def em_pivot(G: np.ndarray) -> PivotResult:
     The post position comes out directly in EM tracker coordinates.
     """
     result, _ = pivot_calibration(G)
+    return result
+
+
+def optical_probe_in_em(cal: CalBody, opt: OptPivot) -> np.ndarray:
+    """Optical probe markers ``H`` mapped into EM base coordinates, per frame.
+
+    The optical tracker may move between frames (tripod jiggle), so each frame
+    gets its own ``F_D = register(d, D_k)`` and ``H_em = F_D^-1 H_k``.
+    """
+    return np.stack([register(cal.d, D).inv().apply(H) for D, H in zip(opt.D, opt.H)])
+
+
+def optical_pivot(cal: CalBody, opt: OptPivot) -> PivotResult:
+    """Pivot calibration of the optical probe, with the post in EM coordinates."""
+    result, _ = pivot_calibration(optical_probe_in_em(cal, opt))
     return result
