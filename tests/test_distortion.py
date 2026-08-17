@@ -2,7 +2,14 @@ import numpy as np
 import pytest
 from math import comb
 
-from cisnav.distortion import DistortionCorrection, ScaleBox, bernstein_1d, bernstein_3d
+from cisnav.distortion import (
+    DistortionCorrection,
+    ScaleBox,
+    bernstein_1d,
+    bernstein_3d,
+    choose_degree,
+    cross_validate,
+)
 
 
 def _grid(n: int = 8, lo: float = 0.0, hi: float = 200.0) -> np.ndarray:
@@ -92,6 +99,40 @@ def test_apply_keeps_input_shape() -> None:
     frames = _smooth_warp(true).reshape(-1, 6, 3)
     assert corr(frames).shape == frames.shape
     assert corr(true[0]).shape == (3,)
+
+
+def _cubic_correction_frames(rng: np.random.Generator, noise: float) -> tuple:
+    measured = rng.uniform(0, 200, size=(60, 27, 3))
+    x, y, z = np.moveaxis(measured / 200.0, -1, 0)
+    true = measured + np.stack([3 * x * y * z, 2 * y**3 - x, 4 * x * z**2], axis=-1)
+    return measured + rng.normal(scale=noise, size=measured.shape), true
+
+
+def test_cross_validation_picks_the_true_degree() -> None:
+    measured, true = _cubic_correction_frames(np.random.default_rng(4), noise=0.05)
+    scores = cross_validate(measured, true, degrees=range(1, 6))
+    assert scores[1] > scores[2] > scores[3]
+    assert choose_degree(scores) == 3
+
+
+def test_cross_validation_marks_impossible_degrees() -> None:
+    measured, true = _cubic_correction_frames(np.random.default_rng(5), noise=0.0)
+    scores = cross_validate(measured[:6], true[:6], degrees=[2, 5])
+    assert np.isfinite(scores[2]) and scores[5] == float("inf")
+
+
+def test_choose_degree_prefers_simpler_on_near_ties() -> None:
+    assert choose_degree({3: 0.300, 4: 0.290, 5: 0.200}) == 5
+    assert choose_degree({3: 0.300, 4: 0.205, 5: 0.200}) == 4
+
+
+def test_box_choice_does_not_change_the_fit() -> None:
+    true = _grid(8)
+    measured = _smooth_warp(true)
+    a = DistortionCorrection.fit(measured, true, degree=3)
+    b = DistortionCorrection.fit(measured, true, degree=3, margin=0.3)
+    probe = np.random.default_rng(6).uniform(-20, 220, size=(50, 3))
+    np.testing.assert_allclose(a(probe), b(probe), atol=1e-6)
 
 
 def test_too_few_samples_rejected() -> None:

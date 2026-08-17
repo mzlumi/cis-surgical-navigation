@@ -26,9 +26,17 @@ Steps:
    basis and return ``F(u) c``.
 
 Points outside the fitting box give ``u`` outside ``[0, 1]``; the polynomial
-still evaluates, but that is extrapolation and less trustworthy. A small
-``margin`` widens the box so readings just outside the calibration volume
-stay inside it.
+still evaluates, but that is extrapolation and less trustworthy. The box only
+affects numerical conditioning, not the fitted function: an affine rescaling
+of the coordinates maps polynomials of degree ``N`` in each coordinate onto
+the same space, so any box gives the same least-squares fit. Widening it with
+``margin`` therefore does not make extrapolation any safer.
+
+**Choosing the degree.** Too low a degree cannot follow the distortion; too
+high a degree fits the noise and oscillates near the edges of the volume.
+``cross_validate`` holds out whole frames of calibration data, fits on the
+rest and measures the error on the held-out frames, and ``choose_degree``
+takes the smallest degree that is close to the best held-out error.
 
 ``numpy.linalg.lstsq`` (LAPACK ``gelsd``) solves the least-squares problem and
 ``scipy.special.comb`` gives the binomial coefficients.
@@ -121,3 +129,48 @@ class DistortionCorrection:
         flat = pts.reshape(-1, 3)
         out = bernstein_3d(self.box.scale(flat), self.degree) @ self.coeffs
         return out.reshape(pts.shape)
+
+
+def cross_validate(
+    measured: np.ndarray,
+    expected: np.ndarray,
+    degrees: range | list[int] = range(1, 8),
+    n_folds: int = 5,
+    seed: int = 0,
+) -> dict[int, float]:
+    """Held-out RMS error of the correction for each candidate degree.
+
+    ``measured`` and ``expected`` have shape ``(N_frames, N_markers, 3)``. Whole
+    frames are held out together, so the test points are calibration-object
+    poses the fit has never seen. Degrees with too few training samples get
+    ``inf``.
+    """
+    measured = np.asarray(measured, dtype=float)
+    expected = np.asarray(expected, dtype=float)
+    n = measured.shape[0]
+    folds = np.array_split(np.random.default_rng(seed).permutation(n), n_folds)
+    scores: dict[int, float] = {}
+    for degree in degrees:
+        sq_errors = []
+        try:
+            for test in folds:
+                train = np.setdiff1d(np.arange(n), test)
+                corr = DistortionCorrection.fit(measured[train], expected[train], degree)
+                err = np.linalg.norm(corr(measured[test]) - expected[test], axis=-1)
+                sq_errors.append(err.ravel() ** 2)
+        except ValueError:
+            scores[degree] = float("inf")
+            continue
+        scores[degree] = float(np.sqrt(np.mean(np.concatenate(sq_errors))))
+    return scores
+
+
+def choose_degree(scores: dict[int, float], tolerance: float = 0.05) -> int:
+    """Smallest degree whose held-out error is within ``tolerance`` of the best.
+
+    Preferring the simpler model when the scores are nearly tied guards
+    against picking a higher degree that only wins by fold-to-fold chance and
+    extrapolates worse outside the calibration volume.
+    """
+    best = min(scores.values())
+    return min(d for d, s in scores.items() if s <= best * (1.0 + tolerance))
