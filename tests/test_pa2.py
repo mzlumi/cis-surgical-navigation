@@ -57,6 +57,40 @@ def test_dewarped_em_post_matches_reference(set_name: str) -> None:
     assert np.linalg.norm(probe.pivot.p_post - ref.em_post) < 0.02
 
 
+def test_fiducials_located_and_registered_to_ct() -> None:
+    rng = np.random.default_rng(1)
+    grid = rng.uniform(0, 500, size=(100, 3))
+    identity = DistortionCorrection.fit(grid, grid, degree=1)
+    g = rng.uniform(-30, 30, size=(6, 3))
+    g -= g.mean(axis=0)
+    t_tip = np.array([5.0, -10.0, -110.0])
+    probe = pa2.ProbeCalibration(
+        g=g, pivot=pa2.PivotResult(t_tip=t_tip, p_post=np.zeros(3), residual_rms=0.0, rank=6)
+    )
+    B_true = rng.uniform(100, 400, size=(6, 3))
+    G = []
+    for Bj in B_true:
+        R = rot_axis_angle(rng.normal(size=3), rng.uniform(0, 1))
+        G.append(Frame(R, Bj - R @ t_tip).apply(g))
+    B = pa2.tip_positions(np.stack(G), identity, probe)
+    np.testing.assert_allclose(B, B_true, atol=1e-8)
+
+    F_true = Frame(rot_z(0.4) @ rot_axis_angle([1.0, 1.0, 0.0], 0.3), [-50.0, 20.0, 5.0])
+    F_reg = pa2.registration_to_ct(B, F_true.apply(B_true))
+    assert F_reg.allclose(F_true, atol=1e-8)
+
+
+@pytest.mark.parametrize("set_name", ["debug-a", "debug-c", "debug-d"])
+def test_fiducial_registration_error_small_without_noise(set_name: str) -> None:
+    prefix = f"pa2-{set_name}"
+    fit = pa2.fit_distortion(*_load(set_name))
+    probe = pa2.dewarped_pivot(io.read_empivot(io.data_path(DATA, prefix, "empivot")), fit.correction)
+    B = pa2.tip_positions(io.read_em_fiducials(io.data_path(DATA, prefix, "em_fiducials")), fit.correction, probe)
+    b = io.read_ct_fiducials(io.data_path(DATA, prefix, "ct_fiducials"))
+    F_reg = pa2.registration_to_ct(B, b)
+    assert np.sqrt(np.mean(np.sum((F_reg.apply(B) - b) ** 2, axis=1))) < 0.05
+
+
 def test_dewarping_shrinks_pivot_residual_on_distorted_data() -> None:
     fit = pa2.fit_distortion(*_load("debug-c"))
     G = io.read_empivot(io.data_path(DATA, "pa2-debug-c", "empivot"))

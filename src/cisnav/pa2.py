@@ -7,6 +7,9 @@ Steps (handout, Assignment 2):
    ``C_expected``. This is the distortion correction.
 3. Dewarp the EM pivot readings and repeat the pivot calibration, giving the
    probe tip ``t_tip`` in a probe frame defined in undistorted space.
+4. Dewarp the readings taken while the probe touches each CT fiducial and
+   compute the tip positions ``B_j`` in EM base coordinates.
+5. Register ``B_j`` to the CT fiducial coordinates ``b_j``, giving ``F_reg``.
 """
 
 from __future__ import annotations
@@ -17,8 +20,10 @@ import numpy as np
 
 from cisnav import pa1
 from cisnav.distortion import DistortionCorrection, choose_degree, cross_validate
+from cisnav.frames import Frame
 from cisnav.io import CalBody, CalReadings
 from cisnav.pivot import PivotResult, pivot_calibration
+from cisnav.registration import register
 
 DEGREES = range(1, 8)
 
@@ -61,3 +66,21 @@ def dewarped_pivot(G: np.ndarray, correction: DistortionCorrection) -> ProbeCali
     """Pivot calibration of the EM probe after dewarping every marker reading."""
     pivot, g = pivot_calibration(correction(G))
     return ProbeCalibration(g=g, pivot=pivot)
+
+
+def tip_positions(
+    G: np.ndarray, correction: DistortionCorrection, probe: ProbeCalibration
+) -> np.ndarray:
+    """Probe tip in (dewarped) EM coordinates for each frame of readings ``G``.
+
+    Each frame is dewarped, registered to the probe model ``g`` to get the
+    probe pose ``F_G[k]``, and the tip is ``F_G[k] t_tip``.
+    """
+    return np.stack(
+        [register(probe.g, Gk).apply(probe.pivot.t_tip) for Gk in correction(G)]
+    )
+
+
+def registration_to_ct(B: np.ndarray, b: np.ndarray) -> Frame:
+    """``F_reg`` with ``b_j ~= F_reg B_j``: EM base coordinates to CT coordinates."""
+    return register(B, b)
