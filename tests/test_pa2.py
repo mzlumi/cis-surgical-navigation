@@ -91,6 +91,24 @@ def test_fiducial_registration_error_small_without_noise(set_name: str) -> None:
     assert np.sqrt(np.mean(np.sum((F_reg.apply(B) - b) ** 2, axis=1))) < 0.05
 
 
+@pytest.mark.parametrize("set_name", ["debug-a", "debug-c", "debug-d"])
+def test_navigation_matches_reference_without_noise(set_name: str) -> None:
+    prefix = f"pa2-{set_name}"
+    result = pa2.run(DATA, prefix)
+    ref = io.read_output2(io.data_path(DATA, prefix, "output2"))
+    assert np.linalg.norm(result.nav_ct - ref, axis=1).max() < 0.03
+
+
+def test_cli_writes_output_files(tmp_path: Path, capsys) -> None:
+    pa2.main(["--data-dir", str(DATA), "--set", "debug-a", "--set", "debug-c", "--out", str(tmp_path)])
+    assert (tmp_path / "pa2-debug-a-output2.txt").exists()
+    assert not (tmp_path / "pa2-debug-a-output1.txt").exists()
+    assert (tmp_path / "pa2-debug-c-output1.txt").exists()
+    tips = io.read_output2(tmp_path / "pa2-debug-c-output2.txt")
+    assert tips.shape == (4, 3)
+    assert "degree 4" in capsys.readouterr().out
+
+
 def test_dewarping_shrinks_pivot_residual_on_distorted_data() -> None:
     fit = pa2.fit_distortion(*_load("debug-c"))
     G = io.read_empivot(io.data_path(DATA, "pa2-debug-c", "empivot"))
