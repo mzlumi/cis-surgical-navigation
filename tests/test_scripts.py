@@ -14,3 +14,11 @@ def test_compare_debug_pa1_writes_report(tmp_path: Path) -> None:
     text = (tmp_path / "pa1_validation.md").read_text()
     assert "| a | no | no | no |" in text
     assert "Interpretation" in text
+
+
+def test_compare_debug_pa2_writes_report(tmp_path: Path) -> None:
+    mod = _script("compare_debug.py")
+    mod["main"](["--assignment", "pa2", "--results-dir", str(tmp_path)])
+    text = (tmp_path / "pa2_validation.md").read_text()
+    assert "| a | no | no | no | 1 |" in text
+    assert "| unknown-j |" in text
