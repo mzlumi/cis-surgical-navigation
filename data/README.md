@@ -19,7 +19,8 @@ The debug sets turn on one source of error at a time, which is what makes them u
 | b | no | yes | no |
 | c | yes | no | no |
 | d | no | no | yes |
-| e | yes | no | yes |
+| e (PA1) | yes | no | yes |
+| e (PA2) | yes | yes | yes |
 | f, g | yes | yes | yes |
 
 The unknown sets have all three error sources. In PA2 the registration to CT also changes from set to set.
