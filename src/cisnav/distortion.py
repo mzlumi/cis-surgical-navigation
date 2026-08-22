@@ -131,6 +131,32 @@ class DistortionCorrection:
         return out.reshape(pts.shape)
 
 
+def held_out_predictions(
+    measured: np.ndarray,
+    expected: np.ndarray,
+    degree: int,
+    n_folds: int = 5,
+    seed: int = 0,
+) -> np.ndarray:
+    """Corrected positions of every frame, each from a fit that excluded it.
+
+    ``measured`` and ``expected`` have shape ``(N_frames, N_markers, 3)``. The
+    frames are split into ``n_folds`` random groups; each group is corrected by
+    a polynomial fitted to the other groups only. Raises ``ValueError`` if the
+    training folds have too few samples for ``degree``.
+    """
+    measured = np.asarray(measured, dtype=float)
+    expected = np.asarray(expected, dtype=float)
+    n = measured.shape[0]
+    folds = np.array_split(np.random.default_rng(seed).permutation(n), n_folds)
+    predicted = np.empty_like(measured)
+    for test in folds:
+        train = np.setdiff1d(np.arange(n), test)
+        corr = DistortionCorrection.fit(measured[train], expected[train], degree)
+        predicted[test] = corr(measured[test])
+    return predicted
+
+
 def cross_validate(
     measured: np.ndarray,
     expected: np.ndarray,
@@ -140,28 +166,19 @@ def cross_validate(
 ) -> dict[int, float]:
     """Held-out RMS error of the correction for each candidate degree.
 
-    ``measured`` and ``expected`` have shape ``(N_frames, N_markers, 3)``. Whole
-    frames are held out together, so the test points are calibration-object
-    poses the fit has never seen. Degrees with too few training samples get
-    ``inf``.
+    Whole frames are held out together (see ``held_out_predictions``), so the
+    test points are calibration-object poses the fit has never seen. Degrees
+    with too few training samples get ``inf``.
     """
-    measured = np.asarray(measured, dtype=float)
-    expected = np.asarray(expected, dtype=float)
-    n = measured.shape[0]
-    folds = np.array_split(np.random.default_rng(seed).permutation(n), n_folds)
     scores: dict[int, float] = {}
     for degree in degrees:
-        sq_errors = []
         try:
-            for test in folds:
-                train = np.setdiff1d(np.arange(n), test)
-                corr = DistortionCorrection.fit(measured[train], expected[train], degree)
-                err = np.linalg.norm(corr(measured[test]) - expected[test], axis=-1)
-                sq_errors.append(err.ravel() ** 2)
+            predicted = held_out_predictions(measured, expected, degree, n_folds, seed)
         except ValueError:
             scores[degree] = float("inf")
             continue
-        scores[degree] = float(np.sqrt(np.mean(np.concatenate(sq_errors))))
+        err = np.linalg.norm(predicted - np.asarray(expected, dtype=float), axis=-1)
+        scores[degree] = float(np.sqrt(np.mean(err**2)))
     return scores
 
 

@@ -9,6 +9,7 @@ from cisnav.distortion import (
     bernstein_3d,
     choose_degree,
     cross_validate,
+    held_out_predictions,
 )
 
 
@@ -119,6 +120,17 @@ def test_cross_validation_marks_impossible_degrees() -> None:
     measured, true = _cubic_correction_frames(np.random.default_rng(5), noise=0.0)
     scores = cross_validate(measured[:6], true[:6], degrees=[2, 5])
     assert np.isfinite(scores[2]) and scores[5] == float("inf")
+
+
+def test_held_out_predictions_never_use_the_test_frame() -> None:
+    # Corrupt one frame's targets. Its own prediction must not move toward the
+    # corrupted values, since it is never part of its own training set.
+    measured, true = _cubic_correction_frames(np.random.default_rng(7), noise=0.0)
+    corrupted = true.copy()
+    corrupted[0] += 50.0
+    pred = held_out_predictions(measured, corrupted, degree=3)
+    np.testing.assert_allclose(pred[0], true[0], atol=0.5)
+    assert pred.shape == measured.shape
 
 
 def test_choose_degree_prefers_simpler_on_near_ties() -> None:
