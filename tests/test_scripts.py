@@ -16,6 +16,14 @@ def test_compare_debug_pa1_writes_report(tmp_path: Path) -> None:
     assert "Interpretation" in text
 
 
+def test_error_sources_writes_figures_and_table(tmp_path: Path) -> None:
+    mod = _script("error_sources.py")
+    mod["main"](["--figures-dir", str(tmp_path), "--results-dir", str(tmp_path)])
+    for name in ("error_sources.png", "degree_cross_validation.png", "distortion_field.png"):
+        assert (tmp_path / name).stat().st_size > 10_000
+    assert "| debug-c | distortion | 4 |" in (tmp_path / "error_sources.md").read_text()
+
+
 def test_compare_debug_pa2_writes_report(tmp_path: Path) -> None:
     mod = _script("compare_debug.py")
     mod["main"](["--assignment", "pa2", "--results-dir", str(tmp_path)])
