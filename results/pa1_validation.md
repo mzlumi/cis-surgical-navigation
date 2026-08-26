@@ -16,9 +16,9 @@ post errors are 3D distances between our post and the reference post.
 | b | no | yes | no | 0.751 | 0.491 | 0.000 | 0.000 |
 | c | yes | no | no | 0.953 | 0.403 | 0.000 | 0.000 |
 | d | no | no | yes | 0.024 | 0.012 | 0.000 | 0.000 |
-| e | yes | no | yes | 3.741 | 1.710 | 0.010 | 0.000 |
-| f | yes | yes | yes | 4.282 | 1.788 | 0.010 | 0.010 |
-| g | yes | yes | yes | 3.359 | 1.680 | 0.010 | 0.000 |
+| e | yes | no | yes | 3.741 | 1.710 | 0.014 | 0.000 |
+| f | yes | yes | yes | 4.282 | 1.788 | 0.014 | 0.010 |
+| g | yes | yes | yes | 3.359 | 1.680 | 0.000 | 0.000 |
 
 ## Diagnostics
 

@@ -2,7 +2,12 @@ import numpy as np
 import pytest
 
 from cisnav.frames import Frame, random_frame, rot_axis_angle, rot_z
-from cisnav.pivot import pivot_calibration, probe_local_markers, solve_pivot
+from cisnav.pivot import (
+    mean_marker_shape,
+    pivot_calibration,
+    probe_local_markers,
+    solve_pivot,
+)
 from cisnav.registration import register
 
 SEEDS = range(15)
@@ -44,8 +49,8 @@ def test_pivot_from_simulated_marker_readings(seed: int) -> None:
     result, g = pivot_calibration(G)
 
     np.testing.assert_allclose(result.p_post, p_post, atol=1e-7)
-    # The tip is reported in the probe frame defined by the first reading, so
-    # mapping it through any frame's pose must land on the post.
+    # The tip is reported in the probe frame defined by ``g``, so mapping it
+    # through any frame's pose must land on the post.
     for Gk in G:
         np.testing.assert_allclose(register(g, Gk).apply(result.t_tip), p_post, atol=1e-7)
 
@@ -73,6 +78,26 @@ def test_probe_local_markers_are_centred() -> None:
     rng = np.random.default_rng(0)
     G0 = rng.normal(size=(6, 3)) * 10 + 500
     np.testing.assert_allclose(probe_local_markers(G0).mean(axis=0), 0.0, atol=1e-12)
+
+
+def test_mean_marker_shape_matches_first_frame_for_rigid_readings() -> None:
+    rng = np.random.default_rng(3)
+    markers = rng.uniform(-30, 30, size=(6, 3))
+    poses = _pivot_poses(rng, np.array([0.0, 0.0, -120.0]), np.zeros(3))
+    G = np.stack([F.apply(markers) for F in poses])
+    np.testing.assert_allclose(mean_marker_shape(G), probe_local_markers(G[0]), atol=1e-9)
+
+
+def test_post_from_distorted_readings_does_not_depend_on_frame_order() -> None:
+    rng = np.random.default_rng(5)
+    markers = rng.uniform(-30, 30, size=(6, 3))
+    poses = _pivot_poses(rng, np.array([0.0, 0.0, -120.0]), np.array([10.0, 20.0, 30.0]))
+    G = np.stack([F.apply(markers) for F in poses])
+    G = G + 0.002 * G**2 / 100.0 + rng.normal(scale=0.5, size=G.shape)
+    post, _ = pivot_calibration(G)
+    for order in (rng.permutation(len(G)) for _ in range(3)):
+        shuffled, _ = pivot_calibration(G[order])
+        np.testing.assert_allclose(shuffled.p_post, post.p_post, atol=1e-6)
 
 
 def test_needs_two_frames() -> None:

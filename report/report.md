@@ -80,9 +80,17 @@ $$
 $$
 
 Stacking all frames gives a $3K\times 6$ linear system that I solve by linear
-least squares (`numpy.linalg.lstsq`). The poses come from registration: the
-first frame's markers, minus their centroid, define the probe model
-$\vec g_j = \vec G_{j}[1] - \bar G[1]$, and $F_k$ = register($\vec g$, $\vec G[k]$).
+least squares (`numpy.linalg.lstsq`). The poses come from registration,
+$F_k$ = register($\vec g$, $\vec G[k]$), against a centred probe model
+$\vec g$. The handout suggests the first frame's markers minus their
+centroid, $\vec g_j = \vec G_{j}[1] - \bar G[1]$. That is exact for a rigid
+probe, but distorted EM readings change the marker shape from frame to frame,
+and the post then depends on which frame happens to come first. I use the
+generalized Procrustes mean instead: align every frame to the current
+estimate, average, recentre and repeat, starting from the first frame. For
+rigid readings this gives the same $\vec g$; for distorted ones every frame
+counts equally and the result no longer depends on the frame order (a unit
+test checks both).
 The system has full rank only if the probe rotates about at least two
 different axes. With rotation about a single axis the tip and post offsets
 along that axis cannot be separated (a unit test checks this rank loss).
@@ -257,8 +265,8 @@ $\lVert R_k\vec t + \vec p_k - \vec P\rVert$ over frames.
 
 | Set | EM post | EM pivot RMS | Optical post | Optical pivot RMS |
 |---|---|---|---|---|
-| h | 209.47, 195.42, 216.93 | 6.18 | 394.59, 399.97, 192.83 | 0.008 |
-| i | 206.30, 200.56, 194.23 | 2.55 | 404.07, 398.23, 203.91 | 0.008 |
+| h | 209.47, 195.41, 217.00 | 6.21 | 394.59, 399.97, 192.83 | 0.008 |
+| i | 206.29, 200.55, 194.22 | 2.55 | 404.07, 398.23, 203.91 | 0.008 |
 | j | 191.07, 190.53, 210.24 | 1.06 | 397.66, 408.18, 202.79 | 0.004 |
 | k | 191.10, 201.09, 187.52 | 2.08 | 402.19, 403.11, 197.89 | 0.007 |
 

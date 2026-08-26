@@ -19,9 +19,15 @@ well posed as long as the probe is pivoted about at least two different axes;
 if all rotations are about one axis, the tip offset along that axis cannot be
 told apart from the post offset and the matrix loses rank.
 
-To get the poses, the marker positions from the first frame, relative to their
-centroid, define the probe coordinate system: ``g_j = G_j[0] - mean(G[0])``.
-Each frame is then registered with ``F_k = register(g, G[k])``.
+To get the poses, the marker positions relative to their centroid define the
+probe coordinate system, and each frame is registered with
+``F_k = register(g, G[k])``. The handout suggests taking ``g`` from the first
+frame, ``g_j = G_j[0] - mean(G[0])``. That is exact for a rigid probe, but
+when the readings are distorted the marker shape changes from frame to frame
+and the first frame is an arbitrary pick among them. ``mean_marker_shape``
+uses the generalized Procrustes mean instead: align every frame to the
+current estimate, average, and repeat. Every frame then counts equally. The
+result is still centred, so ``t_tip`` is expressed the same way.
 """
 
 from __future__ import annotations
@@ -69,6 +75,25 @@ def probe_local_markers(G0: np.ndarray) -> np.ndarray:
     return G0 - G0.mean(axis=0)
 
 
+def mean_marker_shape(
+    G: np.ndarray, max_iter: int = 100, tol: float = 1e-10
+) -> np.ndarray:
+    """Generalized Procrustes mean of the marker readings ``G`` ``(K, N, 3)``.
+
+    Starts from the centred first frame, so the result keeps its orientation
+    and stays close to the handout's ``g``; for rigid readings the two agree.
+    """
+    G = np.asarray(G, dtype=float)
+    g = probe_local_markers(G[0])
+    for _ in range(max_iter):
+        aligned = np.stack([register(Gk, g).apply(Gk) for Gk in G])
+        new = probe_local_markers(aligned.mean(axis=0))
+        if np.max(np.abs(new - g)) < tol:
+            return new
+        g = new
+    return g
+
+
 def probe_frames(g: np.ndarray, G: np.ndarray) -> list[Frame]:
     """Register the probe model ``g`` to every frame of readings ``G`` ``(K, N, 3)``."""
     return [register(g, Gk) for Gk in G]
@@ -82,5 +107,5 @@ def pivot_calibration(G: np.ndarray) -> tuple[PivotResult, np.ndarray]:
     probe coordinate system.
     """
     G = np.asarray(G, dtype=float)
-    g = probe_local_markers(G[0])
+    g = mean_marker_shape(G)
     return solve_pivot(probe_frames(g, G)), g
