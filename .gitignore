@@ -9,6 +9,9 @@ venv/
 .ruff_cache/
 .ipynb_checkpoints/
 
+# Other public solutions fetched by scripts/compare_public.py
+.cache/
+
 # Build and report artifacts
 build/
 dist/
