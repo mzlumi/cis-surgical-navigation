@@ -4,7 +4,8 @@ Usage:
     python scripts/compare_public.py [--clones DIR] [--results-dir DIR]
 
 Fetches the repositories in ``SOURCES`` at pinned commits into ``--clones``
-(default ``.cache/public``) and writes ``results/public_comparison.md``.
+(default ``.cache/public``) and writes ``results/public_comparison.md`` and
+``figures/public_comparison.png``.
 
 Every solution is scored the same way: its own output files against the
 official reference for the data it was run on, and this program's output for
@@ -33,9 +34,13 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-import numpy as np
+import matplotlib
 
-from cisnav import pa1, pa2
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+
+from cisnav import pa1, pa2  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -334,10 +339,47 @@ def report(rows: list[tuple[Source, Entry, list[Score], bool]], n_answers: int) 
     return "\n".join(out) + "\n"
 
 
+def plot(rows: list[tuple[Source, Entry, list[Score], bool]], path: Path) -> None:
+    """Per-set worst PA2 tip error, theirs against this program, one row per repository."""
+    pa2_rows = [r for r in rows if r[1].assignment == "pa2" and r[2]]
+    pa2_rows.sort(key=lambda r: float(np.median([s.theirs[0] for s in r[2]])))
+    fig, ax = plt.subplots(figsize=(10, 0.55 * len(pa2_rows) + 1.6))
+    floor = 5e-3
+    for i, (src, _, scores, same) in enumerate(pa2_rows):
+        y = len(pa2_rows) - 1 - i
+        theirs = np.maximum([s.theirs[0] for s in scores], floor)
+        ours = np.maximum([s.ours[0] for s in scores], floor)
+        ax.scatter(theirs, np.full(len(theirs), y + 0.13), s=22, color="#c44e52", alpha=0.8,
+                   label="their committed output" if i == 0 else None)
+        ax.scatter(ours, np.full(len(ours), y - 0.13), s=22, color="#4c72b0", alpha=0.8,
+                   label="this program on the same input" if i == 0 else None)
+        ax.plot([np.median(theirs)] * 2, [y + 0.02, y + 0.26], color="#c44e52", lw=2.5)
+        ax.plot([np.median(ours)] * 2, [y - 0.26, y - 0.02], color="#4c72b0", lw=2.5)
+    labels = [
+        f"{src.repo.split('/')[0]}\n({'same data' if same else 'own year'}, {len(scores)} sets)"
+        for src, _, scores, same in pa2_rows
+    ]
+    ax.set_yticks(range(len(pa2_rows))[::-1], labels, fontsize=8)
+    ax.set_xscale("log")
+    ax.axvline(0.017, color="0.4", ls=":", lw=1, label="rounding of the files (0.017 mm)")
+    ax.axvline(0.1, color="0.4", ls="--", lw=1, label="0.1 mm")
+    ax.set_xlim(floor * 0.8, None)
+    ax.set_xlabel("worst probe tip error in CT over the navigation frames of a set "
+                  f"(mm, log scale; errors below {floor} mm drawn at {floor})")
+    ax.set_title("PA2 navigation against the official reference, every public solution and set\n"
+                 "(dots: one set each; bars: median over the sets)", fontsize=10)
+    ax.grid(axis="x", which="major", alpha=0.3)
+    ax.legend(fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=4, frameon=False)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--clones", type=Path, default=ROOT / ".cache" / "public")
     parser.add_argument("--results-dir", type=Path, default=ROOT / "results")
+    parser.add_argument("--figures-dir", type=Path, default=ROOT / "figures")
     args = parser.parse_args(argv)
 
     checkouts = {src.repo: fetch(src, args.clones) for src in SOURCES}
@@ -353,6 +395,10 @@ def main(argv: list[str] | None = None) -> None:
     path = args.results_dir / "public_comparison.md"
     path.write_text(report(rows, len(answers)))
     print(f"wrote {path}")
+    args.figures_dir.mkdir(parents=True, exist_ok=True)
+    figure = args.figures_dir / "public_comparison.png"
+    plot(rows, figure)
+    print(f"wrote {figure}")
 
 
 if __name__ == "__main__":

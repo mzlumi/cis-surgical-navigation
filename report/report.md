@@ -24,7 +24,9 @@ optical). PA1 builds the basic tools (frames, point-set registration, pivot
 calibration) and computes where the EM markers *should* have been measured.
 PA2 uses those expected positions to fit and remove the EM distortion, then
 registers the EM tracker to a CT image and reports the probe tip in CT
-coordinates.
+coordinates. Figure 1 shows the whole scene as the program reconstructs it.
+
+![The PA2 scene for pa2-debug-f in EM tracker coordinates: calibration samples and fitting box, the optical tracker, the probe pivoting on the post, and the probe at the CT fiducials and navigation targets.](../figures/workspace.png){width=78%}
 
 The code is in Python (package `cisnav`), uses NumPy and SciPy only for linear
 algebra, and is checked by 506 automated tests and by comparison with every
@@ -94,6 +96,10 @@ test checks both).
 The system has full rank only if the probe rotates about at least two
 different axes. With rotation about a single axis the tip and post offsets
 along that axis cannot be separated (a unit test checks this rank loss).
+Figure 2 shows a real pivot set: the per-frame tips scatter by 1.76 mm RMS
+on distorted readings and by 0.15 mm once they are dewarped (PA2).
+
+![EM pivot calibration of pa2-debug-f: the 12 probe poses around the post, and each pose's tip relative to the post without and with distortion correction.](../figures/pivot_geometry.png){width=100%}
 
 ## Expected EM marker positions (PA1)
 
@@ -131,6 +137,12 @@ $P(\vec C) \approx \vec C^{exp}$.
   by 5-fold cross-validation, holding out whole calibration frames, and take
   the smallest degree within 5% of the best held-out error. This uses only the
   calibration data, never the answer files.
+
+Figure 3 shows the degree-4 basis and the fitted correction in a slice of
+the calibration volume of pa2-debug-f: a smooth field of about 7 mm in the
+middle that grows to 27 mm at the edges.
+
+![The degree-4 Bernstein basis, and the magnitude of the fitted correction $|P(\vec q) - \vec q|$ in a horizontal slice of pa2-debug-f with the nearby calibration readings.](../figures/bernstein_model.png){width=100%}
 
 ## Registration to CT and navigation (PA2)
 
@@ -181,6 +193,7 @@ $\vec v_k = F_{reg}F_G[k]\,\vec t$.
 | `cisnav/output.py` | Output writers in the handout format |
 | `scripts/compare_debug.py` | Validation against the debug outputs |
 | `scripts/error_sources.py`, `scripts/monte_carlo.py` | Error analysis and figures |
+| `scripts/geometry_figures.py` | Figures of the scene, pivot and correction |
 
 The modules form layers: `frames` has no dependencies, `registration` uses
 `frames`, `pivot` uses `registration`, and the `pa1` and `pa2` pipelines only
@@ -298,7 +311,7 @@ Probe tip positions in CT coordinates (mm), the contents of `output2`:
 
 # Discussion
 
-**What each error source costs.** Figure 1 runs the PA2 pipeline on every
+**What each error source costs.** Figure 4 runs the PA2 pipeline on every
 debug set with and without the correction. *Jiggle* (set d) costs nothing,
 because every optical reading is mapped through its own frame's $F_D$.
 *Noise* (set b) sets a floor that no correction removes: about 0.5 mm RMS in
@@ -312,7 +325,7 @@ errors to be a few tenths of a millimetre.
 
 ![PA2 debug sets with and without distortion correction (log scale).](../figures/error_sources.png){width=88%}
 
-**Polynomial degree.** Figure 2 shows the held-out error against degree. In
+**Polynomial degree.** Figure 5 shows the held-out error against degree. In
 every distorted set it falls by roughly an order of magnitude between degree
 3 and 4, then rises: at degree 6 it is 6 to 60 times the degree-4 value, and
 at degree 7 (512 coefficients from about 2700 training points) the fits
@@ -322,7 +335,7 @@ distortion, which avoids fitting noise (the effect seen in set b).
 
 ![Held-out correction error against Bernstein degree for all PA2 sets.](../figures/degree_cross_validation.png){width=70%}
 
-**Where the correction is weakest.** Figure 3 shows the measured EM error in a
+**Where the correction is weakest.** Figure 6 shows the measured EM error in a
 slice of the workspace and what is left after correction, on frames that were
 held out of the fit. The 9 mm RMS error shrinks to 0.6 mm, but the largest
 remaining errors sit at the edge of the volume ($x \approx 870$ mm), where the
@@ -332,14 +345,14 @@ the fiducial and navigation readings are all inside it.
 
 ![Distortion in a slice of pa2-debug-f before and after correction (held-out frames).](../figures/distortion_field.png){width=95%}
 
-**Sensitivity to noise (Monte Carlo).** Figure 4 registers the real marker
+**Sensitivity to noise (Monte Carlo).** Figure 7 registers the real marker
 geometries under synthetic noise. The error grows linearly with noise, and more
 widely spread markers give smaller rotation errors (27 body markers beat the
 6 probe markers by a factor of 11). The probe-tip error, 100 mm from the
 marker centroid, agrees within 4% with the prediction of Fitzpatrick,
 West and Maurer (1998),
 $\mathrm{TRE}^2 = \frac{\mathrm{FLE}^2}{N}\left(1 + \frac13\sum_k d_k^2/f_k^2\right)$,
-which is an independent check of the registration code. Figure 5 does the
+which is an independent check of the registration code. Figure 8 does the
 same for pivot calibration: error falls with the number of frames (from
 0.72 mm with 6 frames to 0.19 mm with 48, at $\sigma = 0.3$ mm), and rises
 steeply when the probe is tilted only a little (3.9 mm at 2 degrees against

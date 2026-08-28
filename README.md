@@ -13,7 +13,7 @@ My implementation of Programming Assignments 1 and 2 from **Computer Integrated 
 - **PA2:** distortion correction with the polynomial degree chosen by cross-validation, EM pivot calibration in corrected space, EM-to-CT registration and navigation. The probe tip in CT matches the reference to rounding in every debug set without EM noise. With noise it is within 0.2 mm, and within 0.1 mm in all four unknown sets.
 - Compared with nine other public solutions on the same references, this one has the lowest median and worst-case PA2 navigation error of all of them, and the most PA1 post positions within rounding of the reference ([comparison](#comparison-with-other-public-solutions)).
 - 510 automated tests (synthetic data with known answers, plus every data file), run by GitHub Actions on each push.
-- Error analysis with five figures and an 8-page report: [`report/report.pdf`](report/report.pdf).
+- Error analysis, figures of the geometry behind each method, and a 10-page report: [`report/report.pdf`](report/report.pdf).
 
 ## Install and run
 
@@ -44,7 +44,10 @@ python scripts/compare_debug.py --assignment pa2
 python scripts/error_sources.py
 python scripts/monte_carlo.py
 
-# Comparison with other public solutions: results/public_comparison.md
+# Geometry figures: figures/workspace.png, pivot_geometry.png, bernstein_model.png
+python scripts/geometry_figures.py --set debug-f
+
+# Comparison with other public solutions: results/public_comparison.md and its figure
 # (fetches the repositories at pinned commits into .cache/public, about 500 MB)
 python scripts/compare_public.py
 
@@ -63,7 +66,7 @@ cd report && pandoc report.md -o report.pdf --pdf-engine=xelatex
 | `src/cisnav/distortion.py` | Bernstein basis, distortion correction fit, cross-validation of the degree |
 | `src/cisnav/pa1.py`, `pa2.py` | The assignment pipelines and their command line tools |
 | `src/cisnav/output.py` | Output writers in the handout format |
-| `scripts/` | Validation, error-source analysis and Monte Carlo study |
+| `scripts/` | Validation, error-source analysis, Monte Carlo study, geometry figures and the public comparison |
 | `tests/` | pytest suite |
 | `output/` | Program outputs for every PA1 and PA2 set |
 | `results/`, `figures/` | Validation reports, analysis tables and figures |
@@ -72,11 +75,73 @@ cd report && pandoc report.md -o report.pdf --pdf-engine=xelatex
 
 ## How it works
 
+![The PA2 navigation scene in EM tracker coordinates](figures/workspace.png)
+
+*Everything the program reconstructs for pa2-debug-f, in EM tracker coordinates: the 125 poses of the calibration object, the box the distortion correction is fitted in, the optical tracker 1.5 m above (it jiggles slightly between frames), the probe pivoting on the post, and the probe touching the CT fiducials and the navigation targets.*
+
+Each tracker and object has its own coordinate system, and every result is a chain of rigid frames between them. Each arrow maps coordinates from its tail into its head. For example, `F_D` takes EM base coordinates to optical tracker coordinates:
+
+```mermaid
+flowchart LR
+    CAL["Calibration object<br/>EM markers c, LEDs a"] -- "F_A" --> OPT["Optical tracker"]
+    EM["EM tracker = EM base<br/>optical markers d"] -- "F_D" --> OPT
+    OPR["Optical probe"] -- "F_H" --> OPT
+    EMR["EM probe<br/>markers g, tip t_tip"] -- "F_G" --> EM
+    RAW["Raw EM readings<br/>(distorted)"] -- "Bernstein P" --> EM
+    EM -- "F_reg" --> CT["CT image<br/>fiducials b"]
+```
+
+PA1 computes `C_expected = F_D⁻¹ F_A c`, the path from the calibration object through the optical tracker into EM coordinates, plus the two pivot calibrations. PA2 fits `P`, then uses only EM readings: `F_G` from dewarped probe markers and `F_reg` from the fiducials give the tip in CT as `F_reg F_G t_tip`. The data flow through the program:
+
+```mermaid
+flowchart TB
+    calread[/"calbody, calreadings"/]
+    empivot[/"empivot"/]
+    optpivot[/"optpivot"/]
+    emfid[/"em-fiducials"/]
+    ctfid[/"ct-fiducials"/]
+    nav[/"EM-nav"/]
+    subgraph PA1
+        Cexp["C_expected = F_D⁻¹ F_A c<br/>for every calibration frame"]
+        emp["EM pivot:<br/>post in EM coordinates"]
+        optp["Optical pivot:<br/>post in EM coordinates"]
+    end
+    subgraph PA2
+        P["Bernstein correction P<br/>degree by 5-fold CV"]
+        dpiv["Pivot of the dewarped<br/>EM probe: t_tip"]
+        B["Tip at each fiducial, B_j"]
+        Freg["F_reg = register(B, b)"]
+        tips["Tip in CT for each<br/>navigation frame"]
+    end
+    calread --> Cexp
+    calread -- "measured C" --> P
+    Cexp --> P
+    empivot --> emp
+    optpivot --> optp
+    empivot --> dpiv
+    P --> dpiv
+    emfid --> B
+    dpiv --> B
+    B --> Freg
+    ctfid --> Freg
+    nav --> tips
+    dpiv --> tips
+    Freg --> tips
+```
+
 **Registration.** To find the rotation `R` and translation `p` that best map points `a_i` onto `b_i`, subtract both centroids, form `H = sum(a~_i b~_i^T)` and take its SVD `H = U S V^T`. The best rotation is `R = V U^T`. If that has determinant -1 (a reflection, possible with noisy or flat point sets), flip the direction with the smallest singular value: `R = V diag(1, 1, det(VU^T)) U^T`. Then `p = mean(b) - R mean(a)`.
 
 **Pivot calibration.** With the tip in a dimple, every probe pose `[R_k, p_k]` satisfies `R_k t_tip + p_k = p_post`. Stacking `[R_k  -I] [t_tip; p_post] = -p_k` for all frames gives a linear least-squares problem. It is solvable only if the probe rotates about at least two axes. The poses come from registering a probe marker model `g` to each frame. The handout takes `g` from the first frame, but distorted EM readings change the marker shape from frame to frame, which makes the post depend on which frame comes first. I use the generalized Procrustes mean of all frames instead. It is identical for rigid readings and moves the most distorted set (unknown-h, 6 mm pivot residual) from 0.07 mm to within rounding of the released answer.
 
+![EM pivot calibration with and without distortion correction](figures/pivot_geometry.png)
+
+*The 12 EM probe poses of pa2-debug-f, each with its markers 100 mm from the tip, swung around the post in many directions (a). Each pose's tip `R_k t_tip + p_k` should land on the post. On the raw readings they scatter by 1.76 mm RMS (b); after dewarping, by 0.15 mm (c).*
+
 **Distortion correction.** Map each EM reading into a unit box, evaluate the `(N+1)^3` tensor-product Bernstein polynomials of degree `N`, and fit coefficients by least squares so that measured positions map onto the positions predicted by the optical tracker. The degree is chosen by 5-fold cross-validation on whole calibration frames, using only the calibration data. It selects degree 4 for every distorted data set.
+
+![Bernstein basis and the fitted correction field](figures/bernstein_model.png)
+
+*Left: the five degree-4 Bernstein polynomials of one coordinate. They are non-negative, sum to one and each peaks in a different part of the range, so a coefficient mostly shapes one region. Right: the fitted correction `|P(q) - q|` across a horizontal slice of the pa2-debug-f volume. It is smooth, about 7 mm in the middle and up to 27 mm at the edges, and the calibration readings (blue) sample it on a regular grid.*
 
 The report explains each method in full, including why the SVD solution is optimal and how the error behaves.
 
@@ -130,6 +195,8 @@ Set b's post differs because the reference appears to use degree 4 even without 
 ## Comparison with other public solutions
 
 Other students have published their CIS I solutions, and the course data changes from year to year. [`scripts/compare_public.py`](scripts/compare_public.py) fetches nine of these repositories at pinned commits. It scores each one's own committed output files against the official reference for the data it was run on. It then runs this program on the same input files and scores it against the same reference. Full per-set tables: [`results/public_comparison.md`](results/public_comparison.md).
+
+![PA2 navigation error of every public solution and of this program on the same sets](figures/public_comparison.png)
 
 **PA2, probe tip in CT coordinates** (worst error over the navigation frames of a set, then median and worst over the sets compared, mm):
 
