@@ -1,6 +1,6 @@
 # Surgical Navigation: Calibration, Registration and Tracking
 
-My implementation of Programming Assignments 1 and 2 from **[Computer Integrated Surgery I](https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:455-655)** at Johns Hopkins University: the math and software behind an electromagnetically tracked surgical navigation system, built from scratch and validated against the course's reference outputs.
+My implementation of Programming Assignments 1 and 2 from **[Computer Integrated Surgery I](https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:455-655)**, taught by Prof. [Russell H. Taylor](https://www.cs.jhu.edu/faculty/russell-taylor/) at Johns Hopkins University: the math and software behind an electromagnetically tracked surgical navigation system, built from scratch and validated against the course's reference outputs.
 
 ![EM tracker distortion before and after Bernstein polynomial correction](figures/distortion_field.png)
 
@@ -248,7 +248,7 @@ The math in this project is short: a centroid, an SVD, a stacked least-squares s
 
 ## The course
 
-**EN.601.455/655 Computer Integrated Surgery I** (formerly 600.445/645) is taught by Prof. Russell H. Taylor in the Department of Computer Science at Johns Hopkins, through the Laboratory for Computational Sensing and Robotics (LCSR). Taylor led early work on robot-assisted orthopaedic surgery at IBM Research and directed the NSF Engineering Research Center for Computer-Integrated Surgical Systems and Technology (CISST ERC) at Hopkins. The course is one of the standard graduate introductions to medical robotics.
+**EN.601.455/655 Computer Integrated Surgery I** (formerly 600.445/645) is taught by Prof. [Russell H. Taylor](https://www.cs.jhu.edu/faculty/russell-taylor/), John C. Malone Professor in the Department of Computer Science at Johns Hopkins, through the Laboratory for Computational Sensing and Robotics (LCSR). Taylor led early work on robot-assisted orthopaedic surgery at IBM Research and directed the NSF Engineering Research Center for Computer-Integrated Surgical Systems and Technology (CISST ERC) at Hopkins. The course is one of the standard graduate introductions to medical robotics.
 
 The course covers how computers, imaging, tracking and robots are combined to plan and carry out interventions:
 
@@ -274,6 +274,7 @@ This repository covers **PA1 and PA2**.
 ### Links
 
 - Course page: <https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:455-655>
+- Prof. Russell H. Taylor: [faculty profile](https://www.cs.jhu.edu/faculty/russell-taylor/), [home page](https://www.cs.jhu.edu/~rht/)
 - Fall 2025 schedule, with current handouts and data: <https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:2025:fall-2025-schedule>
 - Fall 2020 handout used here (JHU Computer Science mirror): <https://www.cs.jhu.edu/cista/455/Homework_2020/Programming%20Assignments%201%20and%202/ProgrammingAssignments1and2.pdf>
 - Companion project course, CIS II: <https://ciis.lcsr.jhu.edu/doku.php?id=courses:456>
