@@ -1,6 +1,6 @@
 # Surgical Navigation: Calibration, Registration and Tracking
 
-My implementation of Programming Assignments 1 and 2 from **Computer Integrated Surgery I** at Johns Hopkins University: the math and software behind an electromagnetically tracked surgical navigation system, built from scratch and validated against the course's reference outputs.
+My implementation of Programming Assignments 1 and 2 from **[Computer Integrated Surgery I](https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:455-655)** at Johns Hopkins University: the math and software behind an electromagnetically tracked surgical navigation system, built from scratch and validated against the course's reference outputs.
 
 ![EM tracker distortion before and after Bernstein polynomial correction](figures/distortion_field.png)
 
