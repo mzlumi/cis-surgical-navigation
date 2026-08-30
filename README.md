@@ -1,6 +1,16 @@
 # Surgical Navigation: Calibration, Registration and Tracking
 
-My implementation of Programming Assignments 1 and 2 from **[Computer Integrated Surgery I](https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:455-655)**, taught by Prof. [Russell H. Taylor](https://www.cs.jhu.edu/faculty/russell-taylor/) at Johns Hopkins University: the math and software behind an electromagnetically tracked surgical navigation system, built from scratch and validated against the course's reference outputs.
+This repository is my solution to the official Programming Assignments 1 and 2 of **[EN.601.455/655 Computer Integrated Surgery I](https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:455-655)** at Johns Hopkins University, taught by Prof. [Russell H. Taylor](https://www.cs.jhu.edu/faculty/russell-taylor/). These are the course's own programming assignments: the same handout, data, and reference outputs the class uses. The work is the math and software behind an electromagnetically tracked surgical navigation system, built from scratch and checked against the course reference outputs.
+
+**Official course pages**
+
+- Course home, Computer-Integrated Interventional Systems Lab: [Computer-Integrated Surgery I (601.455/655)](https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:455-655)
+- Current semester schedule: [Fall 2026](https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:2026:fall-2026-schedule)
+- Johns Hopkins Academic Catalogue: [EN.601.455 and EN.601.655](https://e-catalogue.jhu.edu/course-descriptions/computer_science_601/)
+- Department course sequence: [Computer-Integrated Surgery](https://www.cs.jhu.edu/cista/)
+- Instructor: [faculty profile](https://www.cs.jhu.edu/faculty/russell-taylor/), [home page](https://www.cs.jhu.edu/~rht/) (lists this course)
+- Lab and center: [CiiS Lab](https://ciis.lcsr.jhu.edu/Main_Page), [Laboratory for Computational Sensing and Robotics](https://lcsr.jhu.edu/)
+- Handout for these two assignments (Fall 2020, JHU Computer Science mirror): [Programming Assignments 1 and 2 (PDF)](https://www.cs.jhu.edu/cista/455/Homework_2020/Programming%20Assignments%201%20and%202/ProgrammingAssignments1and2.pdf)
 
 ![EM tracker distortion before and after Bernstein polynomial correction](figures/distortion_field.png)
 
@@ -259,7 +269,7 @@ The course covers how computers, imaging, tracking and robots are combined to pl
 - tracking and stereotactic navigation;
 - surgical robot systems and human-machine cooperation.
 
-Five programming assignments run through the semester on one simulated scenario:
+The course assigns five official programming assignments, which run through the semester on one simulated scenario:
 
 | Assignment | Topic |
 |---|---|
@@ -269,15 +279,18 @@ Five programming assignments run through the semester on one simulated scenario:
 | PA4 | Full iterative closest point registration to a bone surface mesh |
 | PA5 | Deformable registration with a statistical shape model |
 
-This repository covers **PA1 and PA2**.
+This repository is the official **PA1 and PA2**. PA3, PA4, and PA5 are in [cis-surface-registration](https://github.com/mzlumi/cis-surface-registration).
 
-### Links
+### Official links
 
-- Course page: <https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:455-655>
-- Prof. Russell H. Taylor: [faculty profile](https://www.cs.jhu.edu/faculty/russell-taylor/), [home page](https://www.cs.jhu.edu/~rht/)
-- Fall 2025 schedule, with current handouts and data: <https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:2025:fall-2025-schedule>
-- Fall 2020 handout used here (JHU Computer Science mirror): <https://www.cs.jhu.edu/cista/455/Homework_2020/Programming%20Assignments%201%20and%202/ProgrammingAssignments1and2.pdf>
-- Companion project course, CIS II: <https://ciis.lcsr.jhu.edu/doku.php?id=courses:456>
+- Course home: [Computer-Integrated Surgery I](https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:455-655)
+- Schedules: [Fall 2026 (current)](https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:2026:fall-2026-schedule), [Fall 2025](https://ciis.lcsr.jhu.edu/doku.php?id=courses:455-655:2025:fall-2025-schedule)
+- Catalogue entries: [EN.601.455 / EN.601.655](https://e-catalogue.jhu.edu/course-descriptions/computer_science_601/)
+- Department page for the sequence: [cista](https://www.cs.jhu.edu/cista/)
+- Instructor: [faculty profile](https://www.cs.jhu.edu/faculty/russell-taylor/), [home page](https://www.cs.jhu.edu/~rht/)
+- [CiiS Lab](https://ciis.lcsr.jhu.edu/Main_Page) and [LCSR](https://lcsr.jhu.edu/)
+- Assignment handout used here: [Programming Assignments 1 and 2 (PDF)](https://www.cs.jhu.edu/cista/455/Homework_2020/Programming%20Assignments%201%20and%202/ProgrammingAssignments1and2.pdf)
+- Follow-on course, CIS II (EN.601.456/656): [course page](https://ciis.lcsr.jhu.edu/doku.php?id=courses:456)
 
 ## The problem
 
@@ -308,7 +321,7 @@ The full statement, the file formats and the grading rubric are in [`docs/handou
 
 ## Credit
 
-The problem, the handout and the data are by Russell H. Taylor and the CIS I teaching staff at Johns Hopkins University, and are included here for reference only. The code here was written for this project from the handout alone; no code from past students' solutions was used.
+The assignments, the handout, and the data are the official EN.601.455/655 materials by Russell H. Taylor and the CIS I teaching staff at Johns Hopkins University, and are included here for reference only. The code here was written for this project from the handout alone; no code from past students' solutions was used.
 
 After the implementation was complete, other students' public solutions were used for validation, and I am grateful to their authors for publishing them. The copy of the course data in `data/` comes from [wuzijian1997/CIS1-Programming-Assignment](https://github.com/wuzijian1997/CIS1-Programming-Assignment). The released unknown-set answers come from [sameraslan/Computer-Integrated-Surgery-Projects](https://github.com/sameraslan/Computer-Integrated-Surgery-Projects), [Zhiyuan-Ding/JHU-CIS1-PA2](https://github.com/Zhiyuan-Ding/JHU-CIS1-PA2) and [JiaheXu/CIS](https://github.com/JiaheXu/CIS). Other years' data come from the repositories listed in [`results/public_comparison.md`](results/public_comparison.md). One change came out of that comparison: the Procrustes-mean probe model in pivot calibration. It was prompted by a 0.07 mm gap on unknown-h, not by anyone's code.
 
